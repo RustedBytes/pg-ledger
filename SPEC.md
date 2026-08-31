@@ -1,4 +1,4 @@
-Yes. `pgr0ss/pgledger` is a very good reference, but I would not simply port its PL/pgSQL into Rust. I would keep PostgreSQL responsible for storage, locking, constraints, and transactions, while using pgrx to define a stronger domain API and integrate directly with `pg_money` / `pg_crypto`.
+Yes. `pgr0ss/pgledger` is a very good reference, but I would not simply port its PL/pgSQL into Rust. I would keep PostgreSQL responsible for storage, locking, constraints, and transactions, while using pgrx to define a stronger domain API and integrate directly with `pg_money` / `pg_cryptocurrency`.
 
 The reference implementation has three core tables: accounts, transfers, and entries. Accounts hold a cached balance/version; a transfer moves a positive amount between two same-currency accounts; and two immutable entry rows record the resulting debit/credit plus previous/current balances.  It also sorts and locks all affected accounts before processing a batch, specifically to avoid deadlocks.
 
@@ -135,7 +135,7 @@ Conceptually:
 ```text
 LedgerAsset =
     Fiat(pg_money currency)
-    Crypto(pg_crypto asset)
+    Crypto(pg_cryptocurrency asset)
 
 LedgerAmount =
     Fiat(money_minor)
@@ -231,7 +231,7 @@ and:
 fn ledger_amount(input: &str) -> LedgerAmount
 ```
 
-But because you already own `pg_money` and `pg_crypto`, an even cleaner architecture would be interoperability functions:
+But because you already own `pg_money` and `pg_cryptocurrency`, an even cleaner architecture would be interoperability functions:
 
 ```sql
 ledger_amount('USD 100'::money_minor)
@@ -1020,7 +1020,7 @@ idempotency validation
 reversal logic
 complex integrity checks
 integration with pg_money
-integration with pg_crypto
+integration with pg_cryptocurrency
 ```
 
 That gets the best of both worlds.
@@ -1049,5 +1049,4 @@ The reference project's concurrency technique—ordered `FOR UPDATE` account loc
 
 The part I would **not** copy is making a two-account transfer the fundamental accounting primitive. For the exchange service you're building, an **N-posting, per-asset-balanced journal transaction** will age much better.
 
-If we're going to build this as another RustedBytes extension alongside `pg-money` and `pg-crypto`, I'd target **pgrx 0.19.2, PostgreSQL 14–18, with optional runtime interoperability with both extensions**, matching the compatibility strategy you're already using.
-
+If we're going to build this as another RustedBytes extension alongside `pg-money` and `pg-cryptocurrency`, I'd target **pgrx 0.19.2, PostgreSQL 14–18, with optional runtime interoperability with both extensions**, matching the compatibility strategy you're already using.

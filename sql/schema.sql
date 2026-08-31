@@ -315,7 +315,7 @@ BEGIN
 END
 $body$;
 
-CREATE FUNCTION ledger_enable_pg_crypto()
+CREATE FUNCTION ledger_enable_pg_cryptocurrency()
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -330,7 +330,7 @@ BEGIN
     WHERE e.extname = 'pg_ledger';
     SELECT n.nspname INTO crypto_schema
     FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
-    WHERE e.extname = 'pg_crypto';
+    WHERE e.extname = 'pg_cryptocurrency';
     IF ledger_schema IS NULL OR crypto_schema IS NULL THEN RETURN false; END IF;
     EXECUTE format(
         'CREATE OR REPLACE FUNCTION %I.ledger_amount(value %I.crypto_amount) RETURNS %I.ledger_amount '
@@ -376,6 +376,6 @@ $body$;
 DO $body$
 BEGIN
     PERFORM ledger_enable_pg_money();
-    PERFORM ledger_enable_pg_crypto();
+    PERFORM ledger_enable_pg_cryptocurrency();
 END
 $body$;

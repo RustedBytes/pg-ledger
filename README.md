@@ -97,13 +97,13 @@ identity, and input with excess fractional precision is rejected.
 
 ## Optional extension interoperability
 
-`pg_ledger` has no hard dependency on `pg_money` or `pg_crypto`. If either is
-installed first, conversion overloads are enabled during installation. If it is
-installed later, call:
+`pg_ledger` has no hard dependency on `pg_money` or `pg_cryptocurrency`. If
+either is installed first, conversion overloads are enabled during
+installation. If it is installed later, call:
 
 ```sql
 SELECT ledger_enable_pg_money();
-SELECT ledger_enable_pg_crypto();
+SELECT ledger_enable_pg_cryptocurrency();
 ```
 
 The generated adapters include `ledger_amount(money_minor)`,

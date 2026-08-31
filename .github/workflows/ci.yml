@@ -67,9 +67,9 @@ jobs:
         if: matrix.pg == 18
         run: ./ci/test-pg-money-interop.sh "$(cargo pgrx info pg-config 18)"
 
-      - name: Test pg_crypto interoperability
+      - name: Test pg_cryptocurrency interoperability
         if: matrix.pg == 18
-        run: ./ci/test-pg-crypto-interop.sh "$(cargo pgrx info pg-config 18)"
+        run: ./ci/test-pg-cryptocurrency-interop.sh "$(cargo pgrx info pg-config 18)"
 
       - name: Verify package
         run: |

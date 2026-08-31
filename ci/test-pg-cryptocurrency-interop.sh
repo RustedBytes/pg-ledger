@@ -13,8 +13,8 @@ pg_sharedir="$($pg_config --sharedir)"
 pg_major="$($pg_config --version | sed -n 's/.* \([0-9][0-9]*\).*/\1/p')"
 test_port="$((55500 + pg_major))"
 test_root="$(mktemp -d "/tmp/pg-ledger-interop-pg${pg_major}.XXXXXX")"
-fixture_control="$pg_sharedir/extension/pg_crypto.control"
-fixture_sql="$pg_sharedir/extension/pg_crypto--0.0.1.sql"
+fixture_control="$pg_sharedir/extension/pg_cryptocurrency.control"
+fixture_sql="$pg_sharedir/extension/pg_cryptocurrency--0.0.1.sql"
 installed_fixture=false
 
 cleanup() {
@@ -27,13 +27,13 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ ! -e "$fixture_control" ]]; then
-    cp "$project_dir/ci/fixtures/pg_crypto.control" "$fixture_control"
+    cp "$project_dir/ci/fixtures/pg_cryptocurrency.control" "$fixture_control"
     installed_fixture=true
-    cp "$project_dir/ci/fixtures/pg_crypto--0.0.1.sql" "$fixture_sql"
+    cp "$project_dir/ci/fixtures/pg_cryptocurrency--0.0.1.sql" "$fixture_sql"
 fi
 
 "$pg_bindir/initdb" -D "$test_root/data" --no-locale --encoding=UTF8 >/dev/null
 "$pg_bindir/pg_ctl" -D "$test_root/data" -o "-F -p $test_port -k $test_root" -w start >/dev/null
 "$pg_bindir/createdb" -h "$test_root" -p "$test_port" pg_ledger_interop
 "$pg_bindir/psql" -X -v ON_ERROR_STOP=1 -h "$test_root" -p "$test_port" \
-    -d pg_ledger_interop -f "$project_dir/ci/pg-crypto-interop.sql"
+    -d pg_ledger_interop -f "$project_dir/ci/pg-cryptocurrency-interop.sql"
