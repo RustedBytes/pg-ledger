@@ -39,13 +39,11 @@ pub(crate) struct PayloadHashes {
     pub(crate) legacy: String,
 }
 
-fn digest<T: Serialize>(value: &T) -> String {
-    let bytes = serde_json::to_vec(value)
-        .unwrap_or_else(|error| fail_internal(&format!("could not serialize request: {error}")));
-    hex::encode(Sha256::digest(bytes))
+fn digest<T: Serialize>(value: &T) -> Result<String, serde_json::Error> {
+    serde_json::to_vec(value).map(|bytes| hex::encode(Sha256::digest(bytes)))
 }
 
-pub(crate) fn payload_hashes(request: &PostRequest<'_>) -> PayloadHashes {
+fn try_payload_hashes(request: &PostRequest<'_>) -> Result<PayloadHashes, serde_json::Error> {
     let mut postings = request
         .postings
         .iter()
@@ -81,10 +79,15 @@ pub(crate) fn payload_hashes(request: &PostRequest<'_>) -> PayloadHashes {
         reverses_transaction_id,
     };
 
-    PayloadHashes {
-        current: format!("v{FINGERPRINT_VERSION}:{}", digest(&current)),
-        legacy: digest(&legacy),
-    }
+    Ok(PayloadHashes {
+        current: format!("v{FINGERPRINT_VERSION}:{}", digest(&current)?),
+        legacy: digest(&legacy)?,
+    })
+}
+
+pub(crate) fn payload_hashes(request: &PostRequest<'_>) -> PayloadHashes {
+    try_payload_hashes(request)
+        .unwrap_or_else(|error| fail_internal(&format!("could not serialize request: {error}")))
 }
 
 #[cfg(test)]
@@ -114,12 +117,39 @@ mod tests {
             pgrx::Uuid::from_bytes([2; 16]),
             ledger_amount::parse("1 USD").unwrap(),
         );
-        let forward = payload_hashes(&request(vec![first.clone(), second.clone()]));
-        let reversed = payload_hashes(&request(vec![second, first]));
+        let forward = try_payload_hashes(&request(vec![first.clone(), second.clone()])).unwrap();
+        let reversed = try_payload_hashes(&request(vec![second, first])).unwrap();
 
         assert!(forward.current.starts_with("v1:"));
         assert!(!forward.legacy.contains(':'));
         assert_eq!(forward.current, reversed.current);
         assert_eq!(forward.legacy, reversed.legacy);
+    }
+
+    #[test]
+    fn legacy_fingerprint_matches_the_frozen_pre_version_fixture() {
+        let source = ledger_posting::new(
+            pgrx::Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]),
+            ledger_amount::parse("-25 USD").unwrap(),
+        );
+        let destination = ledger_posting::new(
+            pgrx::Uuid::from_bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]),
+            ledger_amount::parse("25 USD").unwrap(),
+        );
+        let metadata = JsonB(serde_json::json!({"fixture": "legacy-v0"}));
+        let fixture = PostRequest {
+            postings: vec![destination, source],
+            reference: Some("legacy-fixture"),
+            idempotency_key: Some("legacy-fixture:1"),
+            event_at: Some(TimestampWithTimeZone::try_from(631_152_000_000_000).unwrap()),
+            metadata: Some(&metadata),
+            reverses_transaction_id: None,
+        };
+
+        let hashes = try_payload_hashes(&fixture).unwrap();
+        assert_eq!(
+            hashes.legacy,
+            "f90f6f74ba4d2e983285031bcd0d107addd726e126a91c1a1b775498d65c91d2"
+        );
     }
 }

@@ -119,9 +119,15 @@ See [docs/API.md](docs/API.md) and [docs/SECURITY.md](docs/SECURITY.md).
 cargo fmt --all -- --check
 cargo clippy --all-targets --no-default-features --features pg18 -- \
     -D warnings -W clippy::pedantic
+cargo test --no-default-features --features pg18
 cargo pgrx test pg18 --no-default-features --features pg18
 ./ci/test-extension.sh "$(cargo pgrx info pg-config 18)"
+./ci/run-long-benchmark.sh "$(cargo pgrx info pg-config 18)" 180 32
 ```
 
-The integration test also runs 400 concurrent opposite-direction transfers and
-then verifies every ledger invariant.
+The integration suite covers fixed legacy-hash replay, injected transactional
+failures, matching and conflicting idempotency races, concurrent reversal
+races, and opposite-direction transfer load before verifying every ledger
+invariant. The long benchmark runs the same safety checks around a timed,
+higher-concurrency workload. See [the upgrade policy](docs/UPGRADING.md) before
+changing the extension version.

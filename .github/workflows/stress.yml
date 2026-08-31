@@ -1,0 +1,48 @@
+name: scheduled stress
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: pgbench duration in seconds
+        required: false
+        default: '180'
+  schedule:
+    - cron: '17 3 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-18-stress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust and build prerequisites
+        run: |
+          rustup toolchain install 1.96.0 --profile minimal
+          rustup default 1.96.0
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential clang libclang-dev pkg-config libssl-dev \
+            libreadline-dev zlib1g-dev flex bison libxml2-dev libxslt1-dev \
+            libicu-dev curl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: scheduled-stress-pg18
+          cache-on-failure: true
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pgrx
+          key: pg-ledger-stress-${{ runner.os }}-${{ runner.arch }}-0.19.2-pg18-v1
+      - name: Install and initialize pgrx
+        run: |
+          command -v cargo-pgrx >/dev/null || cargo install cargo-pgrx --version 0.19.2 --locked
+          if ! cargo pgrx info pg-config 18 >/dev/null 2>&1; then
+            cargo pgrx init --pg18=download --jobs 2
+          fi
+      - name: Run long benchmark and failure suite
+        env:
+          BENCH_DURATION: ${{ inputs.duration || '180' }}
+        run: ./ci/run-long-benchmark.sh "$(cargo pgrx info pg-config 18)" "$BENCH_DURATION" 32

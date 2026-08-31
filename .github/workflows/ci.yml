@@ -49,9 +49,16 @@ jobs:
       - name: Check formatting and lints
         if: matrix.pg == 18
         run: |
+          python3 ci/check-upgrade-path.py
           cargo fmt --all -- --check
           cargo clippy --all-targets --no-default-features --features pg18 -- \
             -D warnings -W clippy::pedantic
+
+      - name: Test standalone Rust and pgrx harnesses
+        if: matrix.pg == 18
+        run: |
+          cargo test --no-default-features --features pg18
+          cargo pgrx test pg18 --no-default-features --features pg18
 
       - name: Test extension
         run: ./ci/test-extension.sh "$(cargo pgrx info pg-config "${{ matrix.pg }}")"
@@ -67,7 +74,8 @@ jobs:
       - name: Verify package
         run: |
           package_dir="$(mktemp -d)"
+          extension_version="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["package"]["version"])')"
           ./install.sh --pg-config "$(cargo pgrx info pg-config "${{ matrix.pg }}")" --out-dir "$package_dir"
-          test "$(find "$package_dir" -name 'pg_ledger--0.1.0.sql' | wc -l)" -eq 1
+          test "$(find "$package_dir" -name "pg_ledger--${extension_version}.sql" | wc -l)" -eq 1
           test "$(find "$package_dir" -name 'pg_ledger.control' | wc -l)" -eq 1
           test "$(find "$package_dir" -name 'pg_ledger.so' | wc -l)" -eq 1
