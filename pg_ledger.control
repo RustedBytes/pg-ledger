@@ -1,0 +1,5 @@
+comment = 'Asset-aware, exact, double-entry accounting for PostgreSQL'
+default_version = '0.1.0'
+module_pathname = '$libdir/pg_ledger'
+relocatable = false
+superuser = false

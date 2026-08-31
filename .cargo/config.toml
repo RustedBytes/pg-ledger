@@ -1,0 +1,2 @@
+[alias]
+pgrx16 = "pgrx package --no-default-features --features pg16"
